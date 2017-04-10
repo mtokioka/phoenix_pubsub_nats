@@ -6,7 +6,7 @@ defmodule Phoenix.PubSub.NatsConn do
   @reconnect_after_ms 5_000
 
   @moduledoc """
-  Worker for pooled connections to Nats
+  Worker for pooled connections to NATS
   """
 
   @doc """
@@ -19,7 +19,7 @@ defmodule Phoenix.PubSub.NatsConn do
   @doc false
   def init([opts]) do
     Process.flag(:trap_exit, true)
-    send(self, :connect)
+    send(self(), :connect)
     {:ok, %{opts: opts, status: :disconnected, conn: nil}}
   end
 

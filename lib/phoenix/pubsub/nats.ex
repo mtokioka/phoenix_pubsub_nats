@@ -1,12 +1,11 @@
 defmodule Phoenix.PubSub.Nats do
   use Supervisor
-  alias Nats.Client
   require Logger
 
   @pool_size 5
 
   @moduledoc """
-  The Supervisor for the Nats `Phoenix.PubSub` adapter
+  The Supervisor for the NATS `Phoenix.PubSub` adapter
   """
 
   def start_link(name, opts \\ []) do
@@ -46,7 +45,7 @@ defmodule Phoenix.PubSub.Nats do
         strategy: :fifo,
         max_overflow: 0
       ]
-      :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, %{host: host})])
+      :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, extract_host(host))])
     end)
     bk_conn_pools = bk_hosts |> Enum.map(fn(host) ->
       conn_pool_name = create_pool_name(bk_conn_pool_base, host)
@@ -57,7 +56,7 @@ defmodule Phoenix.PubSub.Nats do
         strategy: :fifo,
         max_overflow: 0
       ]
-      :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, %{host: host})])
+      :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, extract_host(host))])
     end)
 
     dispatch_rules = [
@@ -82,7 +81,17 @@ defmodule Phoenix.PubSub.Nats do
   end
 
   def create_pool_name(pool_base, host) do
+    host = String.replace(host, ":", "_")
     Module.concat([pool_base, "_#{host}"])
+  end
+
+  defp extract_host(host_config) do
+    split = String.split(host_config, ":")
+    if Enum.count(split) == 1 do
+      %{host: List.first(split)}
+    else
+      %{host: List.first(split), port: String.to_integer(List.last(split))}
+    end
   end
 
   def with_conn(pool_name, fun) when is_function(fun, 1) do

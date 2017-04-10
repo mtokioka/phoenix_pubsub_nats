@@ -5,10 +5,8 @@ defmodule Phoenix.PubSub.NatsServer do
   alias Phoenix.PubSub.NatsConsumer, as: Consumer
   require Logger
 
-  @prefetch_count 10
-
   @moduledoc """
-  `Phoenix.PubSub` adapter for Nats
+  `Phoenix.PubSub` adapter for NATS
   """
 
   def start_link(server_name, conn_pool_base, bk_conn_pool_base, opts) do
@@ -19,7 +17,7 @@ defmodule Phoenix.PubSub.NatsServer do
   Initializes the server.
 
   """
-  def init([server_name, conn_pool_base, bk_conn_pool_base, opts]) do
+  def init([_server_name, conn_pool_base, bk_conn_pool_base, opts]) do
     Process.flag(:trap_exit, true)
     ## TODO: make state compact
     {:ok, %{cons: :ets.new(:rmq_cons, [:set, :private]),
