@@ -19,7 +19,7 @@ defmodule Phoenix.PubSub.NatsConsumer do
 
     case Nats.with_conn(conn_pool, fn conn ->
           ref = Client.sub(conn, self(), topic)
-
+          Process.monitor(conn)
           {:ok, conn, ref}
         end) do
       {:ok, conn, ref} ->
