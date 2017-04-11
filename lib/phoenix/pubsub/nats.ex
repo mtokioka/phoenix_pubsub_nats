@@ -14,8 +14,9 @@ defmodule Phoenix.PubSub.Nats do
   end
 
   def init([name, opts]) do
-    conn_pool_base = Module.concat(__MODULE__, ConnPool)
-    bk_conn_pool_base = Module.concat(__MODULE__, BkConnPool)
+    supervisor_name = Module.concat(__MODULE__, name)
+    conn_pool_base = Module.concat(supervisor_name, ConnPool)
+    bk_conn_pool_base = Module.concat(supervisor_name, BkConnPool)
 
     options = opts[:options] || []
     hosts = options[:hosts] || ["localhost"]
