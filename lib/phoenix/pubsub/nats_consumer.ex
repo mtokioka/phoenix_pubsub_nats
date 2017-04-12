@@ -20,6 +20,7 @@ defmodule Phoenix.PubSub.NatsConsumer do
     case Nats.with_conn(conn_pool, fn conn ->
           ref = Client.sub(conn, self(), topic)
           Process.monitor(conn)
+          Process.monitor(pid)
           {:ok, conn, ref}
         end) do
       {:ok, conn, ref} ->
@@ -33,8 +34,9 @@ defmodule Phoenix.PubSub.NatsConsumer do
     GenServer.call(pid, :stop)
   end
 
-  def handle_call(:stop, _from, %{conn: conn, sub_ref: ref} = _state) do
+  def handle_call(:stop, _from, %{conn: conn, sub_ref: ref} = state) do
     Client.unsub(conn, ref)
+    {:stop, :normal, :ok, state}
   end
 
   def handle_info({:msg, {_sid, _pid}, _subject, _reply, payload}, state) do
