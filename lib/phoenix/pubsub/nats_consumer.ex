@@ -18,7 +18,7 @@ defmodule Phoenix.PubSub.NatsConsumer do
     if link, do: Process.link(pid)
 
     case Nats.with_conn(conn_pool, fn conn ->
-          ref = Client.sub(conn, self(), topic)
+          {:ok, ref} = Client.sub(conn, self(), topic)
           Process.monitor(conn)
           Process.monitor(pid)
           {:ok, conn, ref}
