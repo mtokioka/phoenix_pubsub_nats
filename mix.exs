@@ -19,7 +19,7 @@ defmodule Phoenix.PubSub.Nats.Mixfile do
   defp deps do
     [{:poolboy, ">= 1.4.2"},
      {:phoenix_pubsub, ">= 1.0.0"},
-     {:nats, git: "https://github.com/nats-io/elixir-nats.git"},
+     {:nats, git: "https://github.com/mtokioka/elixir-nats.git"},
      {:libring, "~> 1.0"},
     ]
   end
