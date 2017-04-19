@@ -13,7 +13,7 @@ defmodule Phoenix.PubSub.Nats.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :poolboy, :phoenix_pubsub, :libring]]
+    [applications: [:logger, :poolboy, :phoenix_pubsub, :libring, :nats]]
   end
 
   defp deps do
