@@ -1,4 +1,4 @@
 %{"libring": {:hex, :libring, "1.0.1", "bdf5fe67543b81048718bad10755ea17f9bdeda97f5485acc26ab0c495279bce", [:mix], []},
-  "nats": {:git, "https://github.com/mtokioka/elixir-nats.git", "af179fb7561a17350e335714b3aff5d56b44e991", []},
+  "nats": {:git, "https://github.com/mtokioka/elixir-nats.git", "8bfafb0e8e9ebaba686d74dfb4aea86eeb40fb2e", []},
   "phoenix_pubsub": {:hex, :phoenix_pubsub, "1.0.0", "c31af4be22afeeebfaf246592778c8c840e5a1ddc7ca87610c41ccfb160c2c57", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []}}

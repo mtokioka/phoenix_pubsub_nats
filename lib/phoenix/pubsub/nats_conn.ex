@@ -15,6 +15,9 @@ defmodule Phoenix.PubSub.NatsConn do
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts)
   end
+  def start_link(opts, name) do
+    GenServer.start_link(__MODULE__, opts, name: name)
+  end
 
   @doc false
   def init([opts]) do

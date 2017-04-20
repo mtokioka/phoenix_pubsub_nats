@@ -9,15 +9,15 @@ defmodule Phoenix.PubSub.NatsServer do
   `Phoenix.PubSub` adapter for NATS
   """
 
-  def start_link(server_name, pub_conn_pool_base, conn_pool_base, bk_conn_pool_base, opts) do
-    GenServer.start_link(__MODULE__, [server_name, pub_conn_pool_base, conn_pool_base, bk_conn_pool_base, opts], name: server_name)
+  def start_link(server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, bk_conn_pool_base, opts) do
+    GenServer.start_link(__MODULE__, [server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, bk_conn_pool_base, opts], name: server_name)
   end
 
   @doc """
   Initializes the server.
 
   """
-  def init([_server_name, pub_conn_pool_base, conn_pool_base, bk_conn_pool_base, opts]) do
+  def init([_server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, bk_conn_pool_base, opts]) do
     Process.flag(:trap_exit, true)
     ## TODO: make state compact
     {:ok, %{cons: :ets.new(:rmq_cons, [:set, :private]),
@@ -25,6 +25,7 @@ defmodule Phoenix.PubSub.NatsServer do
             bk_cons: :ets.new(:rmq_bk_cons, [:set, :private]),
             bk_subs: :ets.new(:rmq_bk_subs, [:set, :private]),
             pub_conn_pool_base: pub_conn_pool_base,
+            pub_conn_pool_size: pub_conn_pool_size,
             conn_pool_base: conn_pool_base,
             bk_conn_pool_base: bk_conn_pool_base,
             node_ref: :crypto.strong_rand_bytes(16),
@@ -134,13 +135,16 @@ defmodule Phoenix.PubSub.NatsServer do
   end
 
   def handle_call({:broadcast, from_pid, topic, msg}, _from, state) do
-    pool_host     = Nats.target_shard_host(topic)
+    pool_host = Nats.target_shard_host(topic)
     pool_name = Nats.create_pool_name(state.pub_conn_pool_base, pool_host)
-    case Nats.with_conn(pool_name, fn(conn) ->
-          Client.pub(conn, topic, :erlang.term_to_binary({state.node_ref, from_pid, msg}))
-         end) do
-      :ok              -> {:reply, :ok, state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
+    conn_name = Nats.get_pub_conn_name(pool_name, topic, state.pub_conn_pool_size)
+    case GenServer.call(conn_name, :conn) do
+      {:ok, conn}       ->
+        case Client.pub(conn, topic, :erlang.term_to_binary({state.node_ref, from_pid, msg})) do
+          :ok               -> {:reply, :ok, state}
+          {:error, reason}  -> {:reply, {:error, reason}, state}
+        end
+      {:error, reason}  -> {:reply, {:error, reason}, state}
     end
   end
 

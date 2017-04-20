@@ -41,14 +41,7 @@ defmodule Phoenix.PubSub.Nats do
 
     pub_conn_pools = hosts |> Enum.map(fn(host) ->
       conn_pool_name = create_pool_name(pub_conn_pool_base, host)
-      conn_pool_opts = [
-        name: {:local, conn_pool_name},
-        worker_module: Phoenix.PubSub.NatsConn,
-        size: pub_pool_size,
-        strategy: :fifo,
-        max_overflow: 0
-      ]
-      :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, extract_host(host))])
+      supervisor(Phoenix.PubSub.NatsPubConnSupervisor, [conn_pool_name, pub_pool_size, [Map.merge(nats_opt, extract_host(host))]])
     end)
     conn_pools = hosts |> Enum.map(fn(host) ->
       conn_pool_name = create_pool_name(conn_pool_base, host)
@@ -81,7 +74,7 @@ defmodule Phoenix.PubSub.Nats do
 
     children = pub_conn_pools ++ conn_pools ++ [
       supervisor(Phoenix.PubSub.LocalSupervisor, [name, 1, dispatch_rules]),
-      worker(Phoenix.PubSub.NatsServer, [name, pub_conn_pool_base, conn_pool_base, bk_conn_pool_base, options ++ [shard_num: shard_num, bk_shard_num: bk_shard_num]])
+      worker(Phoenix.PubSub.NatsServer, [name, pub_conn_pool_base, pub_pool_size, conn_pool_base, bk_conn_pool_base, options ++ [shard_num: shard_num, bk_shard_num: bk_shard_num]])
     ] ++ bk_conn_pools
     supervise children, strategy: :one_for_one
   end
@@ -97,6 +90,15 @@ defmodule Phoenix.PubSub.Nats do
   def create_pool_name(pool_base, host) do
     host = String.replace(host, ":", "_")
     Module.concat([pool_base, "_#{host}"])
+  end
+
+  def create_pub_conn_name(pool_base, seq) do
+    Module.concat([pool_base, "_#{seq}"])
+  end
+
+  def get_pub_conn_name(pool_base, topic, size) do
+    seq = :erlang.phash2(topic, size)
+    create_pub_conn_name(pool_base, seq)
   end
 
   defp extract_host(host_config) do
