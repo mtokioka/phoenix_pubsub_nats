@@ -15,6 +15,7 @@ defmodule Phoenix.PubSub.Nats do
 
   def init([name, opts]) do
     supervisor_name = Module.concat(__MODULE__, name)
+    pub_conn_pool_base = Module.concat(supervisor_name, PubConnPool)
     conn_pool_base = Module.concat(supervisor_name, ConnPool)
     bk_conn_pool_base = Module.concat(supervisor_name, BkConnPool)
 
@@ -31,18 +32,30 @@ defmodule Phoenix.PubSub.Nats do
 
     # to make state smaller
     options = List.keydelete(options, :hosts, 0) |> List.keydelete(:bk_hosts, 0)
-    pool_size = opts[:pool_size] || @pool_size
+    sub_pool_size = opts[:sub_pool_size] || @pool_size
+    pub_pool_size = opts[:pub_pool_size] || @pool_size
 
     ## TODO: set various options from config
     nats_opt = %{
     }
 
+    pub_conn_pools = hosts |> Enum.map(fn(host) ->
+      conn_pool_name = create_pool_name(pub_conn_pool_base, host)
+      conn_pool_opts = [
+        name: {:local, conn_pool_name},
+        worker_module: Phoenix.PubSub.NatsConn,
+        size: pub_pool_size,
+        strategy: :fifo,
+        max_overflow: 0
+      ]
+      :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, extract_host(host))])
+    end)
     conn_pools = hosts |> Enum.map(fn(host) ->
       conn_pool_name = create_pool_name(conn_pool_base, host)
       conn_pool_opts = [
         name: {:local, conn_pool_name},
         worker_module: Phoenix.PubSub.NatsConn,
-        size: pool_size,
+        size: sub_pool_size,
         strategy: :fifo,
         max_overflow: 0
       ]
@@ -53,7 +66,7 @@ defmodule Phoenix.PubSub.Nats do
       conn_pool_opts = [
         name: {:local, conn_pool_name},
         worker_module: Phoenix.PubSub.NatsConn,
-        size: pool_size,
+        size: sub_pool_size,
         strategy: :fifo,
         max_overflow: 0
       ]
@@ -66,9 +79,9 @@ defmodule Phoenix.PubSub.Nats do
         {:unsubscribe, Phoenix.PubSub.NatsServer, [name]},
       ]
 
-    children = conn_pools ++ [
-      supervisor(Phoenix.PubSub.LocalSupervisor, [name, pool_size, dispatch_rules]),
-      worker(Phoenix.PubSub.NatsServer, [name, conn_pool_base, bk_conn_pool_base, options ++ [shard_num: shard_num, bk_shard_num: bk_shard_num]])
+    children = pub_conn_pools ++ conn_pools ++ [
+      supervisor(Phoenix.PubSub.LocalSupervisor, [name, 1, dispatch_rules]),
+      worker(Phoenix.PubSub.NatsServer, [name, pub_conn_pool_base, conn_pool_base, bk_conn_pool_base, options ++ [shard_num: shard_num, bk_shard_num: bk_shard_num]])
     ] ++ bk_conn_pools
     supervise children, strategy: :one_for_one
   end
