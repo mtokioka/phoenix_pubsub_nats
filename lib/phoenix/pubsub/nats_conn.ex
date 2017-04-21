@@ -1,6 +1,5 @@
 defmodule Phoenix.PubSub.NatsConn do
   use GenServer
-  alias Nats.Client
   require Logger
 
   @reconnect_after_ms 5_000
@@ -35,7 +34,7 @@ defmodule Phoenix.PubSub.NatsConn do
   end
 
   def handle_info(:connect, state) do
-    case Client.start_link(state.opts) do
+    case Gnat.start_link(state.opts) do
       {:ok, pid} ->
         {:noreply, %{state | conn: pid, status: :connected}}
       {:error, _reason} ->
@@ -51,13 +50,13 @@ defmodule Phoenix.PubSub.NatsConn do
   end
 
   def handle_info({:EXIT, _ref, :shutdown}, %{conn: pid, status: :connected} = state) do
-    Client.stop(pid, 5000)
+    Gnat.stop(pid)
     {:noreply, %{state | conn: nil, status: :disconnected}}
   end
 
   def terminate(_reason, %{conn: pid, status: :connected}) do
     try do
-      Client.stop(pid, 5000)
+      Gnat.stop(pid)
     catch
       _, _ -> :ok
     end

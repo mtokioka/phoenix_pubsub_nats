@@ -1,6 +1,5 @@
 defmodule Phoenix.PubSub.NatsConsumer do
   use GenServer
-  alias Nats.Client
   alias Phoenix.PubSub.Nats
   require Logger
 
@@ -18,7 +17,7 @@ defmodule Phoenix.PubSub.NatsConsumer do
     if link, do: Process.link(pid)
 
     case Nats.with_conn(conn_pool, fn conn ->
-          {:ok, ref} = Client.sub(conn, self(), topic)
+          {:ok, ref} = Gnat.sub(conn, self(), topic)
           Process.monitor(conn)
           Process.monitor(pid)
           {:ok, conn, ref}
@@ -35,11 +34,11 @@ defmodule Phoenix.PubSub.NatsConsumer do
   end
 
   def handle_call(:stop, _from, %{conn: conn, sub_ref: ref} = state) do
-    Client.unsub(conn, ref)
+    Gnat.unsub(conn, ref)
     {:stop, :normal, :ok, state}
   end
 
-  def handle_info({:msg, {_sid, _pid}, _subject, _reply, payload}, state) do
+  def handle_info({:msg, %{body: payload, topic: _, reply_to: _}}, state) do
     {remote_node_ref, from_pid, msg} = :erlang.binary_to_term(payload)
     if from_pid == :none or remote_node_ref != state.node_ref or from_pid != state.pid do
       send(state.pid, msg)
@@ -58,7 +57,7 @@ defmodule Phoenix.PubSub.NatsConsumer do
 
   def terminate(_reason, state) do
     try do
-      Client.unsub(state.conn, state.sub_ref)
+      Gnat.unsub(state.conn, state.sub_ref)
     catch
       _, _ -> :ok
     end

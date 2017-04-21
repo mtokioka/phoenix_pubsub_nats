@@ -1,6 +1,5 @@
 defmodule Phoenix.PubSub.NatsServer do
   use GenServer
-  alias Nats.Client
   alias Phoenix.PubSub.Nats
   alias Phoenix.PubSub.NatsConsumer, as: Consumer
   require Logger
@@ -140,7 +139,7 @@ defmodule Phoenix.PubSub.NatsServer do
     conn_name = Nats.get_pub_conn_name(pool_name, topic, state.pub_conn_pool_size)
     case GenServer.call(conn_name, :conn) do
       {:ok, conn}       ->
-        case Client.pub(conn, topic, :erlang.term_to_binary({state.node_ref, from_pid, msg})) do
+        case Gnat.pub(conn, topic, :erlang.term_to_binary({state.node_ref, from_pid, msg})) do
           :ok               -> {:reply, :ok, state}
           {:error, reason}  -> {:reply, {:error, reason}, state}
         end

@@ -13,13 +13,13 @@ defmodule Phoenix.PubSub.Nats.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :poolboy, :phoenix_pubsub, :libring, :nats]]
+    [applications: [:logger, :poolboy, :phoenix_pubsub, :libring, :gnat]]
   end
 
   defp deps do
     [{:poolboy, ">= 1.4.2"},
      {:phoenix_pubsub, ">= 1.0.0"},
-     {:nats, git: "https://github.com/mtokioka/elixir-nats.git"},
+     {:gnat, git: "https://github.com/mtokioka/gnat.git"},
      {:libring, "~> 1.0"},
     ]
   end

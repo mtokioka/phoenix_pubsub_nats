@@ -104,9 +104,9 @@ defmodule Phoenix.PubSub.Nats do
   defp extract_host(host_config) do
     split = String.split(host_config, ":")
     if Enum.count(split) == 1 do
-      %{host: List.first(split)}
+      %{host: to_char_list(List.first(split))}
     else
-      %{host: List.first(split), port: String.to_integer(List.last(split))}
+      %{host: to_char_list(List.first(split)), port: String.to_integer(List.last(split))}
     end
   end
 
