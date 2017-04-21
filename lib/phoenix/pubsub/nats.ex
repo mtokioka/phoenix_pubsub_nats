@@ -41,7 +41,7 @@ defmodule Phoenix.PubSub.Nats do
 
     pub_conn_pools = hosts |> Enum.map(fn(host) ->
       conn_pool_name = create_pool_name(pub_conn_pool_base, host)
-      supervisor(Phoenix.PubSub.NatsPubConnSupervisor, [conn_pool_name, pub_pool_size, [Map.merge(nats_opt, extract_host(host))]])
+      supervisor(Phoenix.PubSub.NatsPubConnSupervisor, [conn_pool_name, pub_pool_size, [Map.merge(nats_opt, extract_host(host))]], id: conn_pool_name)
     end)
     conn_pools = hosts |> Enum.map(fn(host) ->
       conn_pool_name = create_pool_name(conn_pool_base, host)
