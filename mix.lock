@@ -1,4 +1,4 @@
-%{"gnat": {:git, "https://github.com/mtokioka/gnat.git", "4081800e8c907a68366e25772b7f949aafbd32dc", []},
+%{"gnat": {:hex, :gnat, "0.1.3", "40f024478b3196f36921217ec71c52816915fb1761ef3b9258a6e108a969e043", [:mix], [{:poison, "~> 3.0", [hex: :poison, optional: false]}]},
   "libring": {:hex, :libring, "1.0.1", "bdf5fe67543b81048718bad10755ea17f9bdeda97f5485acc26ab0c495279bce", [:mix], []},
   "nats": {:git, "https://github.com/mtokioka/elixir-nats.git", "cb6bf3b3620e087a111ccc139b16a48011a78fc9", []},
   "phoenix_pubsub": {:hex, :phoenix_pubsub, "1.0.0", "c31af4be22afeeebfaf246592778c8c840e5a1ddc7ca87610c41ccfb160c2c57", [:mix], []},
