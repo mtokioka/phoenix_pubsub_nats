@@ -51,7 +51,7 @@ defmodule Phoenix.PubSub.NatsServer do
               end
 
     unless has_key do
-      pool_host      = Nats.target_shard_host(topic)
+      pool_host      = Nats.target_shard_host(state.opts[:host_ring], topic)
       conn_pool_name = Nats.create_pool_name(state.conn_pool_base, pool_host)
       {:ok, consumer_pid} = Consumer.start(conn_pool_name,
                                            topic,
@@ -70,7 +70,7 @@ defmodule Phoenix.PubSub.NatsServer do
       :ets.insert(state.subs, {topic, pids ++ [{pid, consumer_pid}]})
 
       # register bk server
-      bk_pool_host      = Nats.target_bk_shard_host(topic)
+      bk_pool_host      = Nats.target_shard_host(state.opts[:bk_host_ring], topic)
       if state.opts[:bk_shard_num] > 0 && pool_host != bk_pool_host do
         bk_conn_pool_name = Nats.create_pool_name(state.bk_conn_pool_base, bk_pool_host)
         {:ok, bk_consumer_pid} = Consumer.start(bk_conn_pool_name,
@@ -134,7 +134,7 @@ defmodule Phoenix.PubSub.NatsServer do
   end
 
   def handle_call({:broadcast, from_pid, topic, msg}, _from, state) do
-    pool_host = Nats.target_shard_host(topic)
+    pool_host = Nats.target_shard_host(state.opts[:host_ring], topic)
     pool_name = Nats.create_pool_name(state.pub_conn_pool_base, pool_host)
     conn_name = Nats.get_pub_conn_name(pool_name, topic, state.pub_conn_pool_size)
     case GenServer.call(conn_name, :conn) do

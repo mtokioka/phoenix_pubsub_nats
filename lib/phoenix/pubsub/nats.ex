@@ -22,13 +22,13 @@ defmodule Phoenix.PubSub.Nats do
     options = opts[:options] || []
     hosts = options[:hosts] || ["localhost"]
     shard_num = length(hosts)
-    HashRing.Managed.new(:nats_pubsub_shard)
-    HashRing.Managed.add_nodes(:nats_pubsub_shard, hosts)
+    host_ring = HashRing.new
+    host_ring = HashRing.add_nodes(host_ring, hosts)
 
     bk_hosts = options[:bk_hosts] || []
     bk_shard_num = length(bk_hosts)
-    HashRing.Managed.new(:nats_pubsub_bk_shard)
-    HashRing.Managed.add_nodes(:nats_pubsub_bk_shard, bk_hosts)
+    bk_host_ring = HashRing.new
+    bk_host_ring = HashRing.add_nodes(bk_host_ring, bk_hosts)
 
     # to make state smaller
     options = List.keydelete(options, :hosts, 0) |> List.keydelete(:bk_hosts, 0)
@@ -74,17 +74,15 @@ defmodule Phoenix.PubSub.Nats do
 
     children = pub_conn_pools ++ conn_pools ++ [
       supervisor(Phoenix.PubSub.LocalSupervisor, [name, 1, dispatch_rules]),
-      worker(Phoenix.PubSub.NatsServer, [name, pub_conn_pool_base, pub_pool_size, conn_pool_base, bk_conn_pool_base, options ++ [shard_num: shard_num, bk_shard_num: bk_shard_num]])
+      worker(Phoenix.PubSub.NatsServer,
+            [name, pub_conn_pool_base, pub_pool_size, conn_pool_base, bk_conn_pool_base,
+             options ++ [shard_num: shard_num, bk_shard_num: bk_shard_num, host_ring: host_ring, bk_host_ring: bk_host_ring]])
     ] ++ bk_conn_pools
     supervise children, strategy: :one_for_one
   end
 
-  def target_shard_host(topic) do
-    HashRing.Managed.key_to_node(:nats_pubsub_shard, topic)
-  end
-
-  def target_bk_shard_host(topic) do
-    HashRing.Managed.key_to_node(:nats_pubsub_bk_shard, topic)
+  def target_shard_host(host_ring, topic) do
+    HashRing.key_to_node(host_ring, topic)
   end
 
   def create_pool_name(pool_base, host) do
