@@ -1,6 +1,5 @@
-%{"gnat": {:hex, :gnat, "0.1.3", "40f024478b3196f36921217ec71c52816915fb1761ef3b9258a6e108a969e043", [:mix], [{:poison, "~> 3.0", [hex: :poison, optional: false]}]},
-  "libring": {:hex, :libring, "1.0.1", "bdf5fe67543b81048718bad10755ea17f9bdeda97f5485acc26ab0c495279bce", [:mix], []},
-  "nats": {:git, "https://github.com/mtokioka/elixir-nats.git", "cb6bf3b3620e087a111ccc139b16a48011a78fc9", []},
-  "phoenix_pubsub": {:hex, :phoenix_pubsub, "1.0.0", "c31af4be22afeeebfaf246592778c8c840e5a1ddc7ca87610c41ccfb160c2c57", [:mix], []},
-  "poison": {:hex, :poison, "3.1.0", "d9eb636610e096f86f25d9a46f35a9facac35609a7591b3be3326e99a0484665", [:mix], []},
-  "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []}}
+%{"gnat": {:hex, :gnat, "0.3.1", "20fbfcf951f9b26e95f395308c597b2169a46ad0a66c284f32244a7c6a0b073f", [:mix], [{:poison, "~> 3.0", [hex: :poison, repo: "hexpm", optional: false]}], "hexpm"},
+  "libring": {:hex, :libring, "1.0.2", "95986f0aad553a340f34b898d146474c7a76fdf6e608ad9e0626e07514d8cdf4", [:mix], [], "hexpm"},
+  "phoenix_pubsub": {:hex, :phoenix_pubsub, "1.0.1", "c10ddf6237007c804bf2b8f3c4d5b99009b42eca3a0dfac04ea2d8001186056a", [:mix], [], "hexpm"},
+  "poison": {:hex, :poison, "3.1.0", "d9eb636610e096f86f25d9a46f35a9facac35609a7591b3be3326e99a0484665", [:mix], [], "hexpm"},
+  "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], [], "hexpm"}}
