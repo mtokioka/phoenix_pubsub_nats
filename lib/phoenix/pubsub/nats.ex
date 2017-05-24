@@ -37,6 +37,7 @@ defmodule Phoenix.PubSub.Nats do
 
     ## TODO: set various options from config
     nats_opt = %{
+      tcp_opts: [:binary, nodelay: true],
     }
 
     pub_conn_pools = hosts |> Enum.map(fn(host) ->
