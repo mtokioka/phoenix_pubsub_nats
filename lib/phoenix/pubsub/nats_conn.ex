@@ -49,11 +49,6 @@ defmodule Phoenix.PubSub.NatsConn do
     {:noreply, %{state | conn: nil, status: :disconnected}}
   end
 
-  def handle_info({:EXIT, _ref, :shutdown}, %{conn: pid, status: :connected} = state) do
-    Gnat.stop(pid)
-    {:noreply, %{state | conn: nil, status: :disconnected}}
-  end
-
   def terminate(_reason, %{conn: pid, status: :connected}) do
     try do
       Gnat.stop(pid)
