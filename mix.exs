@@ -19,7 +19,8 @@ defmodule Phoenix.PubSub.Nats.Mixfile do
   defp deps do
     [{:poolboy, ">= 1.4.2"},
      {:phoenix_pubsub, ">= 1.0.0"},
-     {:gnat, ">= 0.3.0"},
+     {:gnat, git: "https://github.com/mtokioka/gnat.git", branch: "verbose_mode"},
+     #{:gnat, ">= 0.3.0"},
      {:libring, "~> 1.0"},
     ]
   end
