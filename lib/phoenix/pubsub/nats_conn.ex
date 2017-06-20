@@ -2,7 +2,7 @@ defmodule Phoenix.PubSub.NatsConn do
   use GenServer
   require Logger
 
-  @reconnect_after_ms 5_000
+  @reconnect_after_ms 500
 
   @moduledoc """
   Worker for pooled connections to NATS
