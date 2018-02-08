@@ -34,7 +34,6 @@ Edit your Phoenix application Endpoint configuration:
 The following options are supported:
 
       * `hosts` - The hostnames of the broker(defaults to [\"localhost:4222\"]);
-      * `bk_hosts` - The hostnames of the broker(defaults to []);
       * `sub_pool_size` - Number of active connections to the broker for subscriber(defaults to 5);
       * `pub_pool_size` - Number of active connections to the broker for publisher(defaults to 5);
 

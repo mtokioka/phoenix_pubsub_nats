@@ -8,25 +8,22 @@ defmodule Phoenix.PubSub.NatsServer do
   `Phoenix.PubSub` adapter for NATS
   """
 
-  def start_link(server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, bk_conn_pool_base, opts) do
-    GenServer.start_link(__MODULE__, [server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, bk_conn_pool_base, opts], name: server_name)
+  def start_link(server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts) do
+    GenServer.start_link(__MODULE__, [server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts], name: server_name)
   end
 
   @doc """
   Initializes the server.
 
   """
-  def init([_server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, bk_conn_pool_base, opts]) do
+  def init([_server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts]) do
     Process.flag(:trap_exit, true)
     ## TODO: make state compact
     {:ok, %{cons: :ets.new(:rmq_cons, [:set, :private]),
             subs: :ets.new(:rmq_subs, [:set, :private]),
-            bk_cons: :ets.new(:rmq_bk_cons, [:set, :private]),
-            bk_subs: :ets.new(:rmq_bk_subs, [:set, :private]),
             pub_conn_pool_base: pub_conn_pool_base,
             pub_conn_pool_size: pub_conn_pool_size,
             conn_pool_base: conn_pool_base,
-            bk_conn_pool_base: bk_conn_pool_base,
             node_ref: :crypto.strong_rand_bytes(16),
             opts: opts}}
   end
@@ -69,26 +66,6 @@ defmodule Phoenix.PubSub.NatsServer do
       end
       :ets.insert(state.subs, {topic, pids ++ [{pid, consumer_pid}]})
 
-      # register bk server
-      bk_pool_host      = Nats.target_shard_host(state.opts[:bk_host_ring], topic)
-      if state.opts[:bk_shard_num] > 0 && pool_host != bk_pool_host do
-        bk_conn_pool_name = Nats.create_pool_name(state.bk_conn_pool_base, bk_pool_host)
-        {:ok, bk_consumer_pid} = Consumer.start(bk_conn_pool_name,
-                                            topic,
-                                            pid,
-                                            state.node_ref,
-                                            link)
-        Process.monitor(bk_consumer_pid)
-
-        :ets.insert(state.bk_cons, {bk_consumer_pid, {topic, pid}})
-        bk_subs_list = :ets.lookup(state.bk_subs, topic)
-        pids = case bk_subs_list do
-          []                -> []
-          [{^topic, pids}]  -> pids
-        end
-        :ets.insert(state.bk_subs, {topic, pids ++ [{pid, bk_consumer_pid}]})
-      end
-
       {:reply, :ok, state}
     end
   end
@@ -104,18 +81,6 @@ defmodule Phoenix.PubSub.NatsServer do
           {^pid, consumer_pid} ->
             :ok = Consumer.stop(consumer_pid)
             delete_subscriber(state.subs, pid, topic)
-
-            # delete bk
-            case :ets.lookup(state.bk_subs, topic) do
-              [] -> nil
-              [{^topic, bk_pids}] ->
-                case Enum.find(bk_pids, false, fn(x) -> elem(x, 0) == pid end) do
-                  nil -> nil
-                  {^pid, bk_consumer_pid} ->
-                    :ok = Consumer.stop(bk_consumer_pid)
-                    delete_subscriber(state.bk_subs, pid, topic)
-                end
-            end
 
             {:reply, :ok, state}
         end
@@ -154,14 +119,6 @@ defmodule Phoenix.PubSub.NatsServer do
         [{^pid, {topic, sub_pid}}] ->
           :ets.delete(state.cons, pid)
           delete_subscriber(state.subs, sub_pid, topic)
-
-          # delete bk
-          case :ets.lookup(state.bk_cons, pid) do
-            [] -> nil
-            [{^pid, {topic, bk_sub_pid}}] ->
-              :ets.delete(state.bk_cons, pid)
-              delete_subscriber(state.bk_subs, bk_sub_pid, topic)
-          end
 
           state
       end

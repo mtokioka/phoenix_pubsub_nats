@@ -17,7 +17,6 @@ defmodule Phoenix.PubSub.Nats do
     supervisor_name = Module.concat(__MODULE__, name)
     pub_conn_pool_base = Module.concat(supervisor_name, PubConnPool)
     conn_pool_base = Module.concat(supervisor_name, ConnPool)
-    bk_conn_pool_base = Module.concat(supervisor_name, BkConnPool)
 
     options = opts[:options] || []
     hosts = options[:hosts] || ["localhost"]
@@ -25,13 +24,8 @@ defmodule Phoenix.PubSub.Nats do
     host_ring = HashRing.new
     host_ring = HashRing.add_nodes(host_ring, hosts)
 
-    bk_hosts = options[:bk_hosts] || []
-    bk_shard_num = length(bk_hosts)
-    bk_host_ring = HashRing.new
-    bk_host_ring = HashRing.add_nodes(bk_host_ring, bk_hosts)
-
     # to make state smaller
-    options = List.keydelete(options, :hosts, 0) |> List.keydelete(:bk_hosts, 0)
+    options = List.keydelete(options, :hosts, 0)
     sub_pool_size = opts[:sub_pool_size] || @pool_size
     pub_pool_size = opts[:pub_pool_size] || @pool_size
 
@@ -55,17 +49,6 @@ defmodule Phoenix.PubSub.Nats do
       ]
       :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, extract_host(host))])
     end)
-    bk_conn_pools = bk_hosts |> Enum.map(fn(host) ->
-      conn_pool_name = create_pool_name(bk_conn_pool_base, host)
-      conn_pool_opts = [
-        name: {:local, conn_pool_name},
-        worker_module: Phoenix.PubSub.NatsConn,
-        size: sub_pool_size,
-        strategy: :fifo,
-        max_overflow: 0
-      ]
-      :poolboy.child_spec(conn_pool_name, conn_pool_opts, [Map.merge(nats_opt, extract_host(host))])
-    end)
 
     dispatch_rules = [
         {:broadcast, Phoenix.PubSub.NatsServer, [name]},
@@ -76,9 +59,9 @@ defmodule Phoenix.PubSub.Nats do
     children = pub_conn_pools ++ conn_pools ++ [
       supervisor(Phoenix.PubSub.LocalSupervisor, [name, 1, dispatch_rules]),
       worker(Phoenix.PubSub.NatsServer,
-            [name, pub_conn_pool_base, pub_pool_size, conn_pool_base, bk_conn_pool_base,
-             options ++ [shard_num: shard_num, bk_shard_num: bk_shard_num, host_ring: host_ring, bk_host_ring: bk_host_ring]])
-    ] ++ bk_conn_pools
+            [name, pub_conn_pool_base, pub_pool_size, conn_pool_base,
+             options ++ [shard_num: shard_num, host_ring: host_ring]])
+    ]
     supervise children, strategy: :one_for_one
   end
 
