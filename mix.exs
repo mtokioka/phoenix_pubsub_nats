@@ -4,7 +4,7 @@ defmodule Phoenix.PubSub.Nats.Mixfile do
   def project do
     [app: :phoenix_pubsub_nats,
      version: "0.0.1",
-     elixir: "~> 1.2",
+     elixir: "~> 1.7",
      description: description(),
      package: package(),
      source_url: "https://github.com/mtokioka/phoenix_pubsub_nats",

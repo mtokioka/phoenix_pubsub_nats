@@ -68,7 +68,7 @@ defmodule PhoenixPubSubNatsTest do
 
     setup do
       server_name = rand_server_name()
-      {:ok, _super_pid} = @adapter.start_link(server_name, [])
+      {:ok, _super_pid} = @adapter.start_link(server_name, [options: [hosts: ["mq"]]])
       {:ok, server: server_name}
     end
 
