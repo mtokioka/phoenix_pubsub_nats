@@ -8,15 +8,15 @@ defmodule Phoenix.PubSub.NatsServer do
   `Phoenix.PubSub` adapter for NATS
   """
 
-  def start_link(server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts) do
-    GenServer.start_link(__MODULE__, [server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts], name: server_name)
+  def start_link(server_name, node_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts) do
+    GenServer.start_link(__MODULE__, [server_name, node_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts], name: server_name)
   end
 
   @doc """
   Initializes the server.
 
   """
-  def init([_server_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts]) do
+  def init([_server_name, node_name, pub_conn_pool_base, pub_conn_pool_size, conn_pool_base, opts]) do
     Process.flag(:trap_exit, true)
     ## TODO: make state compact
     {:ok, %{cons: :ets.new(:rmq_cons, [:set, :private]),
@@ -25,17 +25,24 @@ defmodule Phoenix.PubSub.NatsServer do
             pub_conn_pool_size: pub_conn_pool_size,
             conn_pool_base: conn_pool_base,
             node_ref: :crypto.strong_rand_bytes(16),
+            node_name: node_name,
             opts: opts}}
   end
 
   def subscribe(server_name, pid, topic, opts) do
     GenServer.call(server_name, {:subscribe, pid, topic, opts})
   end
+
   def unsubscribe(server_name, pid, topic) do
     GenServer.call(server_name, {:unsubscribe, pid, topic})
   end
-  def broadcast(server_name,from_pid, topic, msg) do
+
+  def broadcast(server_name, from_pid, topic, msg) do
     GenServer.call(server_name, {:broadcast, from_pid, topic, msg})
+  end
+
+  def direct_broadcast(server_name, node_name, from_pid, topic, msg) do
+    GenServer.call(server_name, {:direct_broadcast, node_name, from_pid, topic, msg})
   end
 
   def handle_call({:subscribe, pid, topic, opts}, _from, state) do
@@ -51,6 +58,7 @@ defmodule Phoenix.PubSub.NatsServer do
       pool_host      = Nats.target_shard_host(state.opts[:host_ring], topic)
       conn_pool_name = Nats.create_pool_name(state.conn_pool_base, pool_host)
       {:ok, consumer_pid} = Consumer.start(conn_pool_name,
+                                           state.node_name,
                                            topic,
                                            pid,
                                            state.node_ref,
@@ -99,17 +107,11 @@ defmodule Phoenix.PubSub.NatsServer do
   end
 
   def handle_call({:broadcast, from_pid, topic, msg}, _from, state) do
-    pool_host = Nats.target_shard_host(state.opts[:host_ring], topic)
-    pool_name = Nats.create_pool_name(state.pub_conn_pool_base, pool_host)
-    conn_name = Nats.get_pub_conn_name(pool_name, topic, state.pub_conn_pool_size)
-    case GenServer.call(conn_name, :conn) |> IO.inspect do
-      {:ok, conn}       ->
-        case Gnat.pub(conn, topic |> IO.inspect, :erlang.term_to_binary({state.node_ref, from_pid, msg}) |> IO.inspect) do
-          :ok               -> {:reply, :ok, state}
-          {:error, reason}  -> {:reply, {:error, reason}, state}
-        end
-      {:error, reason}  -> {:reply, {:error, reason}, state}
-    end
+    do_broadcast(:none, from_pid, topic, msg, state)
+  end
+
+  def handle_call({:direct_broadcast, node_name, from_pid, topic, msg}, _from, state) do
+    do_broadcast(node_name, from_pid, topic, msg, state)
   end
 
   def handle_info({:DOWN, _ref, :process, pid,  _reason}, state) do
@@ -145,4 +147,18 @@ defmodule Phoenix.PubSub.NatsServer do
     end
   end
 
+  defp do_broadcast(node_name, from_pid, topic, msg, state) do
+    pool_host = Nats.target_shard_host(state.opts[:host_ring], topic)
+    pool_name = Nats.create_pool_name(state.pub_conn_pool_base, pool_host)
+    conn_name = Nats.get_pub_conn_name(pool_name, topic, state.pub_conn_pool_size)
+
+    case GenServer.call(conn_name, :conn) do
+      {:ok, conn}       ->
+        case Gnat.pub(conn, topic, :erlang.term_to_binary({state.node_ref, node_name, from_pid, msg})) do
+          :ok               -> {:reply, :ok, state}
+          {:error, reason}  -> {:reply, {:error, reason}, state}
+        end
+      {:error, reason}  -> {:reply, {:error, reason}, state}
+    end
+  end
 end

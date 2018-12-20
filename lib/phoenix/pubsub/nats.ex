@@ -53,6 +53,7 @@ defmodule Phoenix.PubSub.Nats do
 
     dispatch_rules = [
         {:broadcast, Phoenix.PubSub.NatsServer, [name]},
+        {:direct_broadcast, Phoenix.PubSub.NatsServer, [name]},
         {:subscribe, Phoenix.PubSub.NatsServer, [name]},
         {:unsubscribe, Phoenix.PubSub.NatsServer, [name]},
         {:node_name, __MODULE__, [node_name]}
@@ -61,7 +62,7 @@ defmodule Phoenix.PubSub.Nats do
     children = pub_conn_pools ++ conn_pools ++ [
       supervisor(Phoenix.PubSub.LocalSupervisor, [name, 1, dispatch_rules]),
       worker(Phoenix.PubSub.NatsServer,
-            [name, pub_conn_pool_base, pub_pool_size, conn_pool_base,
+            [name, node_name, pub_conn_pool_base, pub_pool_size, conn_pool_base,
              options ++ [shard_num: shard_num, host_ring: host_ring]])
     ]
     supervise children, strategy: :one_for_one
@@ -88,9 +89,9 @@ defmodule Phoenix.PubSub.Nats do
   defp extract_host(host_config) do
     split = String.split(host_config, ":")
     if Enum.count(split) == 1 do
-      %{host: to_char_list(List.first(split))}
+      %{host: to_charlist(List.first(split))}
     else
-      %{host: to_char_list(List.first(split)), port: String.to_integer(List.last(split))}
+      %{host: to_charlist(List.first(split)), port: String.to_integer(List.last(split))}
     end
   end
 
