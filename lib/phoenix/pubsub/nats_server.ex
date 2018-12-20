@@ -102,9 +102,9 @@ defmodule Phoenix.PubSub.NatsServer do
     pool_host = Nats.target_shard_host(state.opts[:host_ring], topic)
     pool_name = Nats.create_pool_name(state.pub_conn_pool_base, pool_host)
     conn_name = Nats.get_pub_conn_name(pool_name, topic, state.pub_conn_pool_size)
-    case GenServer.call(conn_name, :conn) do
+    case GenServer.call(conn_name, :conn) |> IO.inspect do
       {:ok, conn}       ->
-        case Gnat.pub(conn, topic, :erlang.term_to_binary({state.node_ref, from_pid, msg})) do
+        case Gnat.pub(conn, topic |> IO.inspect, :erlang.term_to_binary({state.node_ref, from_pid, msg}) |> IO.inspect) do
           :ok               -> {:reply, :ok, state}
           {:error, reason}  -> {:reply, {:error, reason}, state}
         end
