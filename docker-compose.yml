@@ -1,0 +1,19 @@
+version: '2'
+
+services:
+  mq:
+    image: nats:1.1.0
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
+  app:
+    build: .
+    depends_on:
+      - mq
+    volumes:
+      - .:/home/docker/phoenix_pubsub_nats
+      - archives:/home/docker/phoenix_pubsub_nats/.mix
+
+volumes:
+  archives:

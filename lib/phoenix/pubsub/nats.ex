@@ -34,6 +34,7 @@ defmodule Phoenix.PubSub.Nats do
       tcp_opts: [:binary, nodelay: true],
     }
 
+    node_name   = validate_node_name!(opts)
     pub_conn_pools = hosts |> Enum.map(fn(host) ->
       conn_pool_name = create_pool_name(pub_conn_pool_base, host)
       supervisor(Phoenix.PubSub.NatsPubConnSupervisor, [conn_pool_name, pub_pool_size, [Map.merge(nats_opt, extract_host(host))]], id: conn_pool_name)
@@ -52,14 +53,16 @@ defmodule Phoenix.PubSub.Nats do
 
     dispatch_rules = [
         {:broadcast, Phoenix.PubSub.NatsServer, [name]},
+        {:direct_broadcast, Phoenix.PubSub.NatsServer, [name]},
         {:subscribe, Phoenix.PubSub.NatsServer, [name]},
         {:unsubscribe, Phoenix.PubSub.NatsServer, [name]},
+        {:node_name, __MODULE__, [node_name]}
       ]
 
     children = pub_conn_pools ++ conn_pools ++ [
       supervisor(Phoenix.PubSub.LocalSupervisor, [name, 1, dispatch_rules]),
       worker(Phoenix.PubSub.NatsServer,
-            [name, pub_conn_pool_base, pub_pool_size, conn_pool_base,
+            [name, node_name, pub_conn_pool_base, pub_pool_size, conn_pool_base,
              options ++ [shard_num: shard_num, host_ring: host_ring]])
     ]
     supervise children, strategy: :one_for_one
@@ -86,9 +89,9 @@ defmodule Phoenix.PubSub.Nats do
   defp extract_host(host_config) do
     split = String.split(host_config, ":")
     if Enum.count(split) == 1 do
-      %{host: to_char_list(List.first(split))}
+      %{host: to_charlist(List.first(split))}
     else
-      %{host: to_char_list(List.first(split)), port: String.to_integer(List.last(split))}
+      %{host: to_charlist(List.first(split)), port: String.to_integer(List.last(split))}
     end
   end
 
@@ -108,4 +111,15 @@ defmodule Phoenix.PubSub.Nats do
     end
   end
 
+  @doc false
+  def node_name(nil), do: node()
+  def node_name(configured_name), do: configured_name
+
+  defp validate_node_name!(opts) do
+    case opts[:node_name] || node() do
+      name when name in [nil, :nonode@nohost] ->
+        raise ArgumentError, ":node_name is a required option for unnamed nodes"
+      name -> name
+    end
+  end
 end

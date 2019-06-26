@@ -4,7 +4,7 @@ defmodule Phoenix.PubSub.Nats.Mixfile do
   def project do
     [app: :phoenix_pubsub_nats,
      version: "0.0.1",
-     elixir: "~> 1.2",
+     elixir: "~> 1.7",
      description: description(),
      package: package(),
      source_url: "https://github.com/mtokioka/phoenix_pubsub_nats",
@@ -19,7 +19,7 @@ defmodule Phoenix.PubSub.Nats.Mixfile do
   defp deps do
     [{:poolboy, ">= 1.4.2"},
      {:phoenix_pubsub, ">= 1.0.0"},
-     {:gnat, ">= 0.3.0"},
+     {:gnat, ">= 0.5.0"},
      {:libring, "~> 1.0"},
     ]
   end

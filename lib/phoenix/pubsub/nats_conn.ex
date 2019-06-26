@@ -36,17 +36,23 @@ defmodule Phoenix.PubSub.NatsConn do
   def handle_info(:connect, state) do
     case Gnat.start_link(state.opts) do
       {:ok, pid} ->
+        Logger.info "PubSub connected to Nats."
         {:noreply, %{state | conn: pid, status: :connected}}
       {:error, _reason} ->
+        Logger.error "PubSub failed to connect to Nats. Attempting to reconnect..."
         :timer.send_after(@reconnect_after_ms, :connect)
         {:noreply, state}
     end
   end
 
-  def handle_info({:EXIT, _ref, _reason}, %{conn: _pid, status: :connected} = state) do
-    Logger.error "lost Nats connection. Attempting to reconnect..."
+  def handle_info({:EXIT, _ref, _reason}, %{status: :connected} = state) do
+    Logger.error "PubSub lost Nats connection. Attempting to reconnect..."
     :timer.send_after(@reconnect_after_ms, :connect)
     {:noreply, %{state | conn: nil, status: :disconnected}}
+  end
+  def handle_info({:EXIT, _ref, _reason}, %{status: :disconnected} = state) do
+    Logger.error "PubSub lost link while being disconnected."
+    {:noreply, state}
   end
 
   def terminate(_reason, %{conn: pid, status: :connected}) do

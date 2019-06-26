@@ -26,12 +26,23 @@ defmodule PhoenixPubSubNatsTest do
       GenServer.call(server, {:broadcast, :none, topic, message})
     end
 
+    def direct_broadcast(node_name, server, topic, message) do
+      GenServer.call(server, {:direct_broadcast, node_name, :none, topic, message})
+    end
+
     def broadcast_from(server, from_pid, topic, message) do
       GenServer.call(server, {:broadcast, from_pid, topic, message})
     end
 
     def broadcast!(server, topic, message, broadcaster \\ __MODULE__) do
       case broadcaster.broadcast(server, topic, message) do
+        :ok -> :ok
+        {:error, reason} -> raise BroadcastError, message: reason
+      end
+    end
+
+    def direct_broadcast!(node_name, server, topic, message, broadcaster \\ __MODULE__) do
+      case broadcaster.direct_broadcast(node_name, server, topic, message) do
         :ok -> :ok
         {:error, reason} -> raise BroadcastError, message: reason
       end
@@ -68,7 +79,7 @@ defmodule PhoenixPubSubNatsTest do
 
     setup do
       server_name = rand_server_name()
-      {:ok, _super_pid} = @adapter.start_link(server_name, [])
+      {:ok, _super_pid} = @adapter.start_link(server_name, [node_name: "test@localhost", options: [hosts: ["mq"]]])
       {:ok, server: server_name}
     end
 
@@ -119,6 +130,17 @@ defmodule PhoenixPubSubNatsTest do
       :ok = PubSub.broadcast(context[:server], "topic9", :ping)
       assert_receive :ping
       :ok = PubSub.broadcast!(context[:server], "topic9", :ping)
+      assert_receive :ping
+      assert PubSub.subscribers(context[:server], "topic9") |> Enum.to_list == [self()]
+    end
+
+    test "#{inspect @adapter} direct_broadcast/4 and direct_broadcast!/4 publishes message to a single subscriber", context do
+      assert PubSub.subscribers(context[:server], "topic9") |> Enum.to_list == []
+      PubSub.subscribe(context[:server], self(), "topic9")
+      assert PubSub.subscribers(context[:server], "topic9") |> Enum.to_list == [self()]
+      :ok = PubSub.direct_broadcast("test@localhost", context[:server], "topic9", :ping)
+      assert_receive :ping
+      :ok = PubSub.direct_broadcast!("test@localhost", context[:server], "topic9", :ping)
       assert_receive :ping
       assert PubSub.subscribers(context[:server], "topic9") |> Enum.to_list == [self()]
     end
